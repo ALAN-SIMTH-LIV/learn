@@ -2,12 +2,13 @@ package com.train.learn;
 
 import cn.hutool.core.builder.GenericBuilder;
 import com.train.learn.entity.enums.Season;
-import com.train.learn.entity.po.Animal;
-import com.train.learn.entity.po.Coder;
-import com.train.learn.entity.po.Teacher;
-import com.train.learn.entity.po.User;
+import com.train.learn.entity.po.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 @SpringBootTest
 class LearnApplicationTests {
@@ -62,5 +63,25 @@ class LearnApplicationTests {
 		System.out.println(Season.SUMMER.getDesc());
 		System.out.println(Season.AUTUMN.getDesc());
 		System.out.println(Season.WINTER.getDesc());
+	}
+
+	@Test
+	void Test6() throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+		// 正常的调用
+		Apple apple = Apple.builder()
+				.price(12)
+				.build();
+		System.out.println("苹果的价格: "+apple.getPrice());
+
+		// 反射的调用
+		Class<?> clz = Class.forName("com.train.learn.entity.po.Apple");
+		Method setPriceMethod = clz.getMethod("setPrice",int.class);
+		Constructor<?> appleConstructor = clz.getConstructor();
+		Object appleObj = appleConstructor.newInstance();
+		setPriceMethod.invoke(appleObj,19);
+		Method getPriceMethod = clz.getMethod("getPrice");
+		System.out.println("苹果的价格: " + getPriceMethod.invoke(appleObj));
+
+		Class<?> c = Apple.class;
 	}
 }
