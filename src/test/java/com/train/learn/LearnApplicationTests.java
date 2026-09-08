@@ -1,6 +1,7 @@
 package com.train.learn;
 
 import cn.hutool.core.builder.GenericBuilder;
+import com.train.learn.entity.enums.Season;
 import com.train.learn.entity.po.Animal;
 import com.train.learn.entity.po.Coder;
 import com.train.learn.entity.po.Teacher;
@@ -47,5 +48,19 @@ class LearnApplicationTests {
 				.with(Animal::setName,"test")
 				.build();
 		System.out.println(animal.toString());
+	}
+
+	@Test
+	void Test5() {
+
+		System.out.println(Season.SPRING.getName());
+		System.out.println(Season.SUMMER.getName());
+		System.out.println(Season.AUTUMN.getName());
+		System.out.println(Season.WINTER.getName());
+
+		System.out.println(Season.SPRING.getDesc());
+		System.out.println(Season.SUMMER.getDesc());
+		System.out.println(Season.AUTUMN.getDesc());
+		System.out.println(Season.WINTER.getDesc());
 	}
 }
