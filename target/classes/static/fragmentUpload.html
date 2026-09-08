@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件分片上传</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .info { background: #f5f5f5; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .progress-bar { width: 100%; height: 20px; background: #eee; border-radius: 10px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { height: 100%; background: #4caf50; width: 0%; transition: width 0.3s; }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .status.uploading { background: #e3f2fd; color: #1976d2; }
+        .status.success { background: #e8f5e9; color: #388e3c; }
+        .status.error { background: #ffebee; color: #d32f2f; }
+        button { padding: 10px 20px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+        button:hover { background: #1565c0; }
+        button.reset { background: #666; }
+        button.reset:hover { background: #555; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>📁 支持断点续传的文件分块上传</h2>
+    <input type="file" id="fileInput" onchange="showFileInfo()">
+    <div id="fileInfo" class="info" style="display:none;"></div>
+    <br><br>
+    <button onclick="startUpload()">开始上传</button>
+    <button onclick="resetUpload()" class="reset">重置</button>
+
+    <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+    </div>
+    <div id="progressText">等待上传...</div>
+
+    <div id="status" class="status" style="display:none;"></div>
+</div>
+
+<script>
+    const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB,每片大小
+    let uploadedChunks = 0;
+    let isUploading = false;
+
+    // 格式化文件大小显示
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    // 显示文件信息
+    function showFileInfo() {
+        const file = document.getElementById('fileInput').files[0];
+        if (file) {
+            document.getElementById('fileInfo').style.display = 'block';
+            document.getElementById('fileInfo').innerText =
+                `文件名: ${file.name} | 大小: ${formatSize(file.size)} | 类型: ${file.type || '未知'}`;
+        }
+    }
+
+    // 开始上传
+    async function startUpload() {
+        if (isUploading) return; // 防止重复点击
+
+        const file = document.getElementById('fileInput').files[0];
+        if (!file) { showStatus('请先选择文件！', 'error'); return; }
+
+        isUploading = true;
+        uploadedChunks = 0;
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+        showStatus(`开始上传，共 ${totalChunks} 个分片...`, 'uploading');
+        updateProgress(0, totalChunks);
+
+        for (let i = 0; i < totalChunks; i++) {
+            const start = i * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+
+            const formData = new FormData();
+            formData.append('chunk', chunk);
+            formData.append('fileName', file.name);
+            formData.append('chunkNumber', i + 1);
+            formData.append('totalChunks', totalChunks);
+
+            try {
+                const res = await fetch('/upload-chunk', { method: 'POST', body: formData });
+                if (!res.ok) throw new Error('服务器返回错误');
+
+                uploadedChunks++;
+                updateProgress(uploadedChunks, totalChunks);
+
+                if (uploadedChunks === totalChunks) {
+                    showStatus(`✅ 上传完成！共 ${totalChunks} 个分片，文件大小 ${formatSize(file.size)}`, 'success');
+                    isUploading = false;
+                }
+            } catch (err) {
+                showStatus(`❌ 第 ${i + 1} 个分片上传失败，请重试。`, 'error');
+                isUploading = false;
+                break;
+            }
+        }
+    }
+
+    // 更新进度条
+    function updateProgress(current, total) {
+        const pct = Math.round((current / total) * 100);
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressText').innerText = `${pct}% (${current}/${total} 分片)`;
+    }
+
+    // 显示状态消息
+    function showStatus(msg, type) {
+        const el = document.getElementById('status');
+        el.style.display = 'block';
+        el.className = 'status ' + type;
+        el.innerText = msg;
+    }
+
+    // 重置
+    function resetUpload() {
+        uploadedChunks = 0;
+        isUploading = false;
+        document.getElementById('fileInput').value = '';
+        document.getElementById('fileInfo').style.display = 'none';
+        document.getElementById('progressFill').style.width = '0%';
+        document.getElementById('progressText').innerText = '等待上传...';
+        document.getElementById('status').style.display = 'none';
+    }
+</script>
+</body>
+</html>
